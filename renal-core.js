@@ -28,7 +28,8 @@ const RenalCore=(()=>{
   if(modalidad!=='NM')throw Error('No es una imagen de medicina nuclear (modalidad '+(modalidad||'desconocida')+').');
   const px=pixels(d),n=px.frames;
   const detectores=seq(d,'x00540022').map((q,i)=>({indice:i+1,vista:codigo(q,'x00540220'),angulo:Number(text(q,'x00540200')),zoom:nums(q,'x00280031')[0]||1}));
-  const fases=seq(d,'x00540032').map(f=>({frames:Number(text(f,'x00540033')),duracionMs:Number(text(f,'x00181242'))}));
+  // NumberOfFramesInPhase es US (entero binario); ActualFrameDuration es IS (texto).
+  const fases=seq(d,'x00540032').map(f=>({frames:f.uint16('x00540033')||Number(text(f,'x00540033'))||0,duracionMs:Number(text(f,'x00181242'))||0}));
   const detectorPorFrame=vector(d,'x00540020',n)||Uint16Array.from({length:n},()=>1);
   const fasePorFrame=vector(d,'x00540030',n);
   const ventanas=seq(d,'x00540012').map(w=>{const r=seq(w,'x00540013')[0];return {nombre:text(w,'x00540018'),bajo:r?Number(text(r,'x00540014')):NaN,alto:r?Number(text(r,'x00540015')):NaN};});
@@ -91,8 +92,11 @@ const RenalCore=(()=>{
   const umbral=fraccion*pico;if(!(pico>0))return m;
   const inicio=img[sy*cols+sx]>=umbral?sy*cols+sx:mejor;const px=inicio%cols,py=(inicio-px)/cols;
   const x0=Math.max(0,px-ventana),x1=Math.min(cols-1,px+ventana),y0=Math.max(0,py-ventana),y1=Math.min(rows-1,py+ventana);
+  // Solo cuenta como derrame tocar un borde de la ventana que cae dentro de la imagen: un organo
+  // pegado al borde del campo no es un derrame.
+  const bx0=px-ventana>0,bx1=px+ventana<cols-1,by0=py-ventana>0,by1=py+ventana<rows-1;
   const cola=[inicio];m[inicio]=1;let borde=0;
-  while(cola.length){const i=cola.pop();const x=i%cols,y=(i-x)/cols;if(x===x0||x===x1||y===y0||y===y1)borde++;
+  while(cola.length){const i=cola.pop();const x=i%cols,y=(i-x)/cols;if((bx0&&x===x0)||(bx1&&x===x1)||(by0&&y===y0)||(by1&&y===y1))borde++;
    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<x0||ny<y0||nx>x1||ny>y1)continue;const j=ny*cols+nx;if(!m[j]&&img[j]>=umbral){m[j]=1;cola.push(j);}}}
   isocontorno.derramado=borde>8;
   return m;
@@ -105,6 +109,18 @@ const RenalCore=(()=>{
   const interior=dilatar(mRinon,rows,cols,op.desde??4),exterior=dilatar(mRinon,rows,cols,op.hasta??8);
   const lateral=c.x<cols/2?-1:1;// hacia afuera del cuerpo
   for(let i=0;i<out.length;i++){if(!exterior[i]||interior[i])continue;const x=i%cols,y=(i-x)/cols;if(op.todo||(x-c.x)*lateral>0||y>c.y+(op.inferior??0.25)*Math.sqrt(c.n))out[i]=1;}
+  return out;
+ }
+ /* Fondo perirrenal robusto para matrices chicas: anillo alrededor del rinon dividido en sectores
+    angulares; se conservan los `elegir` sectores de menor actividad en `img`, para no caer sobre
+    higado, bazo o vasos. Devuelve la mascara del fondo. */
+ function fondoSectores(mRinon,img,rows,cols,op={}){
+  const c=centroide(mRinon,rows,cols);const out=new Uint8Array(rows*cols);if(!c)return out;
+  const interior=dilatar(mRinon,rows,cols,op.desde??1),exterior=dilatar(mRinon,rows,cols,op.hasta??3);const n=op.sectores??8;
+  const suma=new Float64Array(n),cuenta=new Uint32Array(n),sector=new Int8Array(rows*cols).fill(-1);
+  for(let i=0;i<out.length;i++){if(!exterior[i]||interior[i])continue;const x=i%cols,y=(i-x)/cols;const a=Math.atan2(y-c.y,x-c.x);const k=Math.min(n-1,Math.floor((a+Math.PI)/(2*Math.PI)*n));sector[i]=k;suma[k]+=img[i];cuenta[k]++;}
+  const orden=[...Array(n).keys()].filter(k=>cuenta[k]>=3).sort((a,b)=>suma[a]/cuenta[a]-suma[b]/cuenta[b]).slice(0,op.elegir??2);
+  for(let i=0;i<out.length;i++)if(sector[i]>=0&&orden.includes(sector[i]))out[i]=1;
   return out;
  }
  function espejar(m,rows,cols){const out=new Uint8Array(m.length);for(let y=0;y<rows;y++)for(let x=0;x<cols;x++)out[y*cols+x]=m[y*cols+(cols-1-x)];return out;}
@@ -137,5 +153,5 @@ const RenalCore=(()=>{
  function mascaraDesdeBase64(s){return desdeBase64(s);}
  function fmt(n,dec=1){return Number.isFinite(n)?n.toLocaleString('es-CL',{minimumFractionDigits:dec,maximumFractionDigits:dec}):'—';}
  function fnvTexto(texto){return fnv(new TextEncoder().encode(String(texto||'')));}
- return {leer,sumar,maximo,total,pintar,PALETAS,suavizar,mascaraPoligono,isocontorno,dilatar,centroide,fondoPerirrenal,espejar,cuentas,contorno,lienzo,descargar,canvasABlob,base64,desdeBase64,limpiarNombre,guardarProyecto,abrirProyecto,mascaraABase64,mascaraDesdeBase64,fmt,fnv,fnvTexto};
+ return {leer,sumar,maximo,total,pintar,PALETAS,suavizar,mascaraPoligono,isocontorno,dilatar,centroide,fondoPerirrenal,fondoSectores,espejar,cuentas,contorno,lienzo,descargar,canvasABlob,base64,desdeBase64,limpiarNombre,guardarProyecto,abrirProyecto,mascaraABase64,mascaraDesdeBase64,fmt,fnv,fnvTexto};
 })();
