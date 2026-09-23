@@ -4,7 +4,6 @@
    se muestran solo al terminar el caso, para comparar con lo que calculo el alumno. */
 'use strict';
 const DMSA_TOLERANCIA=5; // puntos porcentuales de diferencia aceptable frente al informe
-const DMSA_ESTUDIANTES={Juan:[1,2],Magdalena:[3,4],Benjamin:[5,6],Diego:[7,8],Sofia:[9,10]};
 const DMSA_VISTAS={ap:['Anterior','Posterior'],oad:['OAD','OPI'],oai:['OAI','OPD']};
 const DMSA_ROLES={ap:'AP/PA (anterior y posterior)',oad:'oblicuas OAD y OPI',oai:'oblicuas OAI y OPD'};
 // Preguntas orales comunes: cinco para los dos casos del estudiante, 10 minutos en total.

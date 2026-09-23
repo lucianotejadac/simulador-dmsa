@@ -246,8 +246,7 @@ function refrescar(){
 function reiniciar(conCaso=true){Object.assign(S,{archivos:[],ignorados:[],seleccion:null,marcadores:{Anterior:{},Posterior:{}},marcaActiva:null,rois:{Posterior:{},Anterior:{}},poligono:[],confirmado:false,exportados:{vistas:false,cuantif:false},proyectoGuardado:false,infoVista:new Set()});$('archivos').value='';$('carpeta').value='';$('previsualizacion').replaceChildren();$('exportInfo').textContent='';if(conCaso){navegar(0);refrescar();}}
 /* ---------- tutorial ---------- */
 function pasosTutorial(n,caso){
- const nombreEst=Object.entries(DMSA_ESTUDIANTES).find(([,l])=>l.includes(n))?.[0];
- const carpeta=nombreEst?'«DMSA '+nombreEst+' › Caso '+n+'»':'la carpeta del caso '+n;
+ const carpeta='la carpeta «Caso '+n+'» dentro de tu carpeta DMSA';
  return [
   {titulo:'Cargar los tres archivos',pantalla:0,resaltar:'archivos',
    texto:'Tu carpeta es '+carpeta+'. Trae tres archivos DICOM sin extensión; cada uno guarda dos vistas, una por detector.',
@@ -312,7 +311,7 @@ function cierreTutorial(n,caso){
 }
 /* ---------- arranque ---------- */
 function iniciar(){
- tutorial=RenalTutorial.crear({contenedor:$('tutorial'),workspace:$('workspace'),boton:$('tutorialBoton'),titulo:'Tutorial DMSA',clave:'dmsaTutorial',casos:DMSA_CASOS,estudiantes:DMSA_ESTUDIANTES,pasos:pasosTutorial,cierre:cierreTutorial,preguntasOrales:DMSA_PREGUNTAS_ORALES,
+ tutorial=RenalTutorial.crear({contenedor:$('tutorial'),workspace:$('workspace'),boton:$('tutorialBoton'),titulo:'Tutorial DMSA',clave:'dmsaTutorial',casos:DMSA_CASOS,pasos:pasosTutorial,cierre:cierreTutorial,preguntasOrales:DMSA_PREGUNTAS_ORALES,
   onCaso:n=>{S.caso=n;refrescarSuave();},navegar:i=>{if(i!==S.paso&&S.archivos.length)navegar(i);}});
  S.caso=tutorial.caso;
  $('archivos').onchange=e=>cargar([...e.target.files]);$('carpeta').onchange=e=>cargar([...e.target.files].filter(f=>!/\.(png|pdf|txt)$/i.test(f.name)));
