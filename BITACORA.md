@@ -65,6 +65,10 @@ puntos. 202 comprobaciones, 0 fallas.
 cualquier fondo automático; se mantuvo la resta porque es el método del equipo y de la literatura,
 y el alumno puede desactivarla para ver el efecto.
 
+### Línea del panel al control (26-09-2026)
+
+El panel compartido `renal-tutorial.js` tira ahora una línea de puntos animada desde su borde hasta el control resaltado, con `tutorial-linea.js` (idéntico en los cinco simuladores). Idea tomada de la consola TC; decisión y validación en la bitácora de `simulador-cardiaco`, sección 10. Solo cambia la guía visual; los cálculos no se tocaron.
+
 ### Pendientes
 
 - Versionar las URL de los scripts al publicar cambios, para el caché del navegador.
